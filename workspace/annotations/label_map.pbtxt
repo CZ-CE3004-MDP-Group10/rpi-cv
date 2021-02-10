@@ -1,0 +1,60 @@
+item { 
+	name:'0'
+	id:1
+}
+item { 
+	name:'6'
+	id:2
+}
+item { 
+	name:'7'
+	id:3
+}
+item { 
+	name:'8'
+	id:4
+}
+item { 
+	name:'9'
+	id:5
+}
+item { 
+	name:'circle'
+	id:6
+}
+item { 
+	name:'up'
+	id:7
+}
+item { 
+	name:'down'
+	id:8
+}
+item { 
+	name:'left'
+	id:9
+}
+item { 
+	name:'right'
+	id:10
+}
+item { 
+	name:'v'
+	id:11
+}
+item { 
+	name:'w'
+	id:12
+}
+item { 
+	name:'x'
+	id:13
+}
+item { 
+	name:'y'
+	id:14
+}
+item { 
+	name:'z'
+	id:15
+}
