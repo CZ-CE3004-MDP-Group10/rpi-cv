@@ -1,41 +1,41 @@
 item { 
-	name:'0'
+	name:'up'
 	id:1
 }
 item { 
-	name:'6'
+	name:'down'
 	id:2
 }
 item { 
-	name:'7'
+	name:'right'
 	id:3
 }
 item { 
-	name:'8'
+	name:'left'
 	id:4
 }
 item { 
-	name:'9'
+	name:'go'
 	id:5
 }
 item { 
-	name:'circle'
+	name:'6'
 	id:6
 }
 item { 
-	name:'up'
+	name:'7'
 	id:7
 }
 item { 
-	name:'down'
+	name:'8'
 	id:8
 }
 item { 
-	name:'left'
+	name:'9'
 	id:9
 }
 item { 
-	name:'right'
+	name:'0'
 	id:10
 }
 item { 

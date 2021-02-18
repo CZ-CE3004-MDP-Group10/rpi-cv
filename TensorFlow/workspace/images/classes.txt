@@ -1,0 +1,15 @@
+up
+down
+right
+left
+go
+6
+7
+8
+9
+0
+w
+y
+v
+x
+z
