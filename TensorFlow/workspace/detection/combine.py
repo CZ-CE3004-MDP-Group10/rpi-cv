@@ -4,7 +4,7 @@ import math
 from PIL import Image
 
 
-def collate_output_image():
+def collate_output_image(image_count):
     folder = 'images/detected_images'
     image_paths = [os.path.join(folder, f)
                    for f in os.listdir(folder) if f.endswith('.jpg')]
@@ -25,5 +25,5 @@ def collate_output_image():
         # print('pos {0},{1} size {2},{3}'.format(x, y, w, h))
         result.paste(img, (x, y, x + w, y + h))
 
-    result.save('./images/output_images/final_output.jpg', 'JPEG')
+    result.save(f"./images/output_images/final_output_{image_count}.jpg", 'JPEG')
     print("Output image generated :)")
