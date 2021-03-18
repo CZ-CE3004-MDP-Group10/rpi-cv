@@ -1,4 +1,5 @@
 import sys
+import re
 import cv2
 import os
 import socket
@@ -11,6 +12,8 @@ from object_detection.utils import label_map_util, config_util
 from object_detection.utils import visualization_utils as viz_utils
 from multiprocessing import Process, Queue
 from combine import collate_output_image
+
+
 
 
 class Detection:
@@ -26,7 +29,7 @@ class Detection:
         # disable GPU/cuda
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-        self.MIN_THRESHOLD = .65
+        self.MIN_THRESHOLD = .61
         self.MAX_BOUNDING_BOXES = 100
         self.image_count = 0
         read_queue = Queue()
@@ -36,8 +39,6 @@ class Detection:
         # start inference process
         p = Process(target=self.run_inference_for_single_image, args=(read_queue, write_queue))
         p.start()
-        # p1 = Process(target=self.write_function, args=(self.sock, ))
-        # p1.start()
 
         while True:
             if not connected:
@@ -52,20 +53,35 @@ class Detection:
             else:
                 try:
                     if not write_queue.empty():
-                        self.sock.send(write_queue.get().encode())
+                        message = write_queue.get()
+                        print("WRITE QUEUE MESSAGE : ", message, type(message))
+                        self.sock.send(message.encode())
                         pass
+
                     print("Waiting into Message")
                     message = self.sock.recv(1024).decode('utf-8').strip()
                     print(message)
+
                     if message == "Q":
+                        p.terminate()
+                        print("Detection process terminated")
                         collate_output_image(self.image_count)
                         self.image_count += 1
+                        # try sending final 5 IMAGE
+
+                        #for grid coordinates, create a global hashmap with format {image_id:position}
+                        #for the image_id above find those in the global hashmap and return the position
+
+                        ## AND|obs(13,2)[image_id]{Heading}<1>
+                        ## AND|obs(13,7)[image_id]{Heading}<2>
+                        ## AND|obs(15,2)[image_id]{Heading}<3>
+                        ## AND|obs(15,6)[image_id]{Heading}<4>
+                        ## AND|obs(11,5)[image_id]{Heading}<5>
+
                     else:
                         file_name, file_size = message.split('|')
-                        print(file_name)
-                        print(file_size)
-                        file_size = int(file_size)
                         print(f'file_name {file_name} {file_size} bytes (FILE RECEIVE START)')
+                        file_size = int(file_size)
                         file = open(f'{self.RAW_IMAGES_PATH}/{file_name}.jpg', 'wb')
                         l = self.sock.recv(1024)
                         total = len(l)
@@ -79,7 +95,6 @@ class Detection:
                         file.close()
                         print(f'file_name {file_name} {file_size} bytes (FILE RECEIVE SUCCESS)')
                         read_queue.put(file_name)
-
                 except KeyboardInterrupt:
                     self.sock.close()
                     connected = False
@@ -90,20 +105,12 @@ class Detection:
                 except Exception as e:
                     print(f'ImageCV:{e}')
 
-    # Write function
-    # def write_function(self, sock):
-    #     if not self.write_queue.empty():
-    #         sock.send(self.write_queue.get().encode())
-    #         pass
-
     @tf.function
     def detect_fn(self, image):
         """
         Detect objects in image.
-
         Args:
         image: (tf.tensor): 4D input image
-
         Returs:
         detections (dict): predictions that model made
         """
@@ -114,6 +121,7 @@ class Detection:
         detections = self.detection_model.postprocess(prediction_dict, shapes)
         print(f"(detect_fn) (FINISH) {image} {time.time() - start:.2f}seconds ")
         return detections
+
 
     def run_inference_for_single_image(self, queue, write_queue):
         # model initialisation
@@ -155,15 +163,13 @@ class Detection:
                 print(f"(detect_fn) (FINISH) {image_name} {time.time() - start:.2f}seconds ")
 
                 if identified_class and detections['detection_scores'][index] > self.MIN_THRESHOLD:
+                    m = re.match(r".*?(\d+),(\d+),(\d+).*", image_name)
+                    message = f"AND|obs({m.group(1)},{m.group(2)})[{identified_class}]{{{m.group(3)}}}"
 
-                    message = f"AND|obs({image_name[2]},{image_name[4]})[{identified_class}]" \
-                              f"<{image_name[0]}>{{{image_name[6]}}}"
                     print(f"(CLASS IDENTIFIED) message added to write_queue and plot infered image")
-                    # message = f"({image_name[2]},{image_name[4]})[{identified_class}]" \
-                    #           f"<{image_name[0]}>{{{image_name[6]}}}"
                     print(f"(MSG) {message}")
                     write_queue.put(message)
-                    # self.sock.send(message.encode())
+
                     viz_utils.visualize_boxes_and_labels_on_image_array(
                         image_np,
                         detections['detection_boxes'],
