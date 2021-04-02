@@ -14,8 +14,6 @@ from multiprocessing import Process, Queue
 from combine import collate_output_image
 
 
-
-
 class Detection:
     def __init__(self):
         # Path variables
@@ -35,6 +33,8 @@ class Detection:
         read_queue = Queue()
         write_queue = Queue()
         connected = False
+        self.image_set = set()
+        self.index=0
 
         # start inference process
         p = Process(target=self.run_inference_for_single_image, args=(read_queue, write_queue))
@@ -67,16 +67,6 @@ class Detection:
                         print("Detection process terminated")
                         collate_output_image(self.image_count)
                         self.image_count += 1
-                        # try sending final 5 IMAGE
-
-                        #for grid coordinates, create a global hashmap with format {image_id:position}
-                        #for the image_id above find those in the global hashmap and return the position
-
-                        ## AND|obs(13,2)[image_id]{Heading}<1>
-                        ## AND|obs(13,7)[image_id]{Heading}<2>
-                        ## AND|obs(15,2)[image_id]{Heading}<3>
-                        ## AND|obs(15,6)[image_id]{Heading}<4>
-                        ## AND|obs(11,5)[image_id]{Heading}<5>
 
                     else:
                         file_name, file_size = message.split('|')
@@ -122,7 +112,6 @@ class Detection:
         print(f"(detect_fn) (FINISH) {image} {time.time() - start:.2f}seconds ")
         return detections
 
-
     def run_inference_for_single_image(self, queue, write_queue):
         # model initialisation
         configs = config_util.get_configs_from_pipeline_file(self.CONFIG_PATH)  # import model config
@@ -163,28 +152,32 @@ class Detection:
                 print(f"(detect_fn) (FINISH) {image_name} {time.time() - start:.2f}seconds ")
 
                 if identified_class and detections['detection_scores'][index] > self.MIN_THRESHOLD:
-                    m = re.match(r".*?(\d+),(\d+),(\d+).*", image_name)
-                    message = f"AND|obs({m.group(1)},{m.group(2)})[{identified_class}]{{{m.group(3)}}}"
 
-                    print(f"(CLASS IDENTIFIED) message added to write_queue and plot infered image")
-                    print(f"(MSG) {message}")
-                    write_queue.put(message)
+                    if identified_class not in self.image_set:
+                        self.image_set.add(identified_class)
+                        m = re.match(r".*?(\d+),(\d+),(\d+).*", image_name)
+                        message = f"AND|obs({m.group(1)},{m.group(2)})[{identified_class}]{{{m.group(3)}}}"
 
-                    viz_utils.visualize_boxes_and_labels_on_image_array(
-                        image_np,
-                        detections['detection_boxes'],
-                        detections['detection_classes'] + 1,
-                        detections['detection_scores'],
-                        self.category_index,
-                        use_normalized_coordinates=True,
-                        max_boxes_to_draw=self.MAX_BOUNDING_BOXES,
-                        min_score_thresh=self.MIN_THRESHOLD,
-                        line_thickness=5,
-                        agnostic_mode=False)
-                    cv2.imwrite(
-                        f"{self.INFERED_IMAGES_PATH}/{image_name}.jpg", image_np)
-                    collate_output_image(self.image_count)
-                    self.image_count += 1
+                        print(f"(CLASS IDENTIFIED) message added to write_queue and plot infered image")
+                        print(f"(MSG) {message}")
+                        if(len(self.image_set) < 6):
+                            write_queue.put(message)
+
+	                        viz_utils.visualize_boxes_and_labels_on_image_array(
+	                            image_np,
+	                            detections['detection_boxes'],
+	                            detections['detection_classes'] + 1,
+	                            detections['detection_scores'],
+	                            self.category_index,
+	                            use_normalized_coordinates=True,
+	                            max_boxes_to_draw=self.MAX_BOUNDING_BOXES,
+	                            min_score_thresh=self.MIN_THRESHOLD,
+	                            line_thickness=5,
+	                            agnostic_mode=False)
+	                        cv2.imwrite(
+	                            f"{self.INFERED_IMAGES_PATH}/{image_name}.jpg", image_np)
+	                        collate_output_image(self.image_count)
+	                        self.image_count += 1
                 else:
                     print(f"No class identified for {image_name}")
                 print(f"{image_name} VISUALISATION COMPLETE")
